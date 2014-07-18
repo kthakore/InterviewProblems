@@ -1,12 +1,13 @@
 use strict;
 use warnings;
 use lib 'lib';
-use Tree::RedBlack;
+use Tree::Treap;
 use Correct::Vowels;
 use Correct::Duplicate;
+use Data::Dumper;
 
 #Create a redblack tree
-my $t = Tree::RedBlack->new();
+my $t = Tree::Treap->new("str");
 print STDERR  "Loading dictionary ...";
 #Load the words into a redblack tree
 my @words = loadDict($t);
@@ -45,15 +46,22 @@ while (1) {
 #Build Suggestions and search for them in the tree
 sub suggestAndSearch {
   my $word = lc(shift);
+  my $already_found = $t->get_val($word);
+  return $already_found if $already_found;
   #Get vowel suggestions and dupliciated word suggestions
   my @vowel_suggestions = Correct::Vowels::suggestions($word); 
   my @duplicate_suggestions = Correct::Duplicate::suggestions($word); 
   my @suggestions = (@vowel_suggestions, @duplicate_suggestions);
-  #for each suggession see if we can find a word 
+  my @more = ();
+  foreach my $suggestion (@suggestions) {
+      @more = (@more, Correct::Duplicate::suggestions($suggestion), Correct::Vowels::suggestions($suggestion));
+  }
+  @suggestions = (@suggestions, @more);
+   #for each suggession see if we can find a word 
   #if we do then return it
   foreach my $suggested (@suggestions) {
         next unless $suggested;
-     my $found = $t->find($suggested);
+     my $found = $t->get_val($suggested);
      next unless $found;
      return $found;
   }

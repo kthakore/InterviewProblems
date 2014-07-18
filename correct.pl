@@ -1,70 +1,78 @@
 use strict;
 use warnings;
-use List::BinarySearch qw( binsearch );
-use Text::Levenshtein qw(distance);
-use Data::Dumper;
 use lib 'lib';
+use Tree::RedBlack;
 use Correct::Vowels;
 use Correct::Duplicate;
 
-my $control = '';
-my @words = loadDict();
+#Create a redblack tree
+my $t = Tree::RedBlack->new();
+print STDERR  "Loading dictionary ...";
+#Load the words into a redblack tree
+my @words = loadDict($t);
+print STDERR "Ready \n";
 
+#Create a comparator that ignores case by converting both words to lowercase
+$t->cmp(sub {  
+        my $lc_a = lc(shift);       
+       my $lc_b = lc(shift);
+       chomp($lc_b);
+       my $cmp = $lc_a cmp $lc_b;
+       return $cmp;
+});
 
+#Check if we are piping data 
+unless (-t STDIN and not @ARGV ) {
+    my @pipedWords = split(' ',<STDIN>);
+    foreach my $word (@pipedWords) {
+       print "Incorrect Word: $word \n";
+       print "Suggestion: " . suggestAndSearch($word) . "\n";
+    }
+  exit;
+}
+
+#Loop for input
 while (1) {
   # get stdin from prompt
   print ">";
-  $control = <>;
+  my $control = <>;
+  # remove and new line characters
   chomp($control);
-   print buildSuggestions($control) . "\n";
+  # Search for a suggestion
+  print suggestAndSearch($control) . "\n";
 }
 
-sub buildSuggestions {
+#Build Suggestions and search for them in the tree
+sub suggestAndSearch {
   my $word = lc(shift);
+  #Get vowel suggestions and dupliciated word suggestions
   my @vowel_suggestions = Correct::Vowels::suggestions($word); 
   my @duplicate_suggestions = Correct::Duplicate::suggestions($word); 
   my @suggestions = (@vowel_suggestions, @duplicate_suggestions);
-  my $min_distance = 1000;
-  my $foundHash = {};
-  my @founds = ();
+  #for each suggession see if we can find a word 
+  #if we do then return it
   foreach my $suggested (@suggestions) {
         next unless $suggested;
-     my $found = searchDict($suggested);
+     my $found = $t->find($suggested);
      next unless $found;
-
-     my $distance = distance($word, $found) ;
-     $min_distance = $distance if ($distance < $min_distance);
-     $foundHash->{$distance} = $found;
-     push @founds, $found;
+     return $found;
   }
-  
-  return 'NO SUGGESTIONS' unless $foundHash->{$min_distance};
-  my $first = $foundHash->{$min_distance} || $founds[0];
-  return $first;  
+  return 'NO SUGGESTIONS';
 
 }
 
 
+#Load the file and insert the words into a redblack tree
 sub loadDict {
+    my $tree = shift;
     my $dict = 'words';
     open my $dictFH, "<$dict" or die;
     my @words = <$dictFH>;
     close $dictFH;
+    foreach my $word (@words) {
+        chomp($word);
+        $tree->insert($word, $word);
+    }
     return @words;
 }
 
-sub searchDict {
-    my $word = shift;
-    return unless $word;
-     my $lowest = 6;
-  
-    my $index = binsearch { 
-       my $lc_a = lc($a);       
-       my $lc_b = lc($b);
-       chomp($lc_b);
-       my $cmp = $lc_a cmp $lc_b;
-       return $cmp;
-	} $word, @words;
-     
-    return $words[$index] if $index;
-}

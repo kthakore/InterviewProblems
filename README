@@ -1,0 +1,28 @@
+Disqus coding challenge.
+
+I used perl 5.14 to implement the code (I chose this language due to the power regular expressions features). I also used a RedBlack tree library from CPAN (which I have included in the lib/Tree/ folder). I chose this structure so that I wouldn't have to rescan the document and also due to the following wikipedia article:
+
+https://en.wikipedia.org/wiki/Binary_search_tree#Performance_comparisons
+
+My approach was to generate suggestions based on the input and the search for the variations on the word. 
+
+To solve the problem of uppercase error. I just lowercase'd the input and all the words in the dictionary before storing in the redblack tree.
+
+The classes of error suggestions were implemented using the powerful regular expressions in perl. More detailed comments are included in the files below. 
+
+1. Vowel replacement: lib/Correct/Vowel.pm
+2. Duplicates: lib/Correct/Duplicate.pm
+
+To run the prompt please do:
+
+$ perl correct.pl
+
+Incorrect word generation 
+
+I used a dispatch to randomly select between the three errors.
+
+To run the incorrect.pl 
+
+$ perl incorrect.pl
+
+$ perl incorrect.pl | perl correct.pl
